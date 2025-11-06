@@ -1,23 +1,8 @@
 /**
- * POSTS PAGE
+ * POSTS PAGE - FIXED VERSION
  *
  * Purpose: Manage posts (view, create, edit, delete)
- *
- * What does this page do?
- * - Display all posts with author information
- * - Allow creating new posts
- * - Allow editing own posts
- * - Allow deleting own posts
- * - Show loading and error states
- *
- * Features:
- * - Full CRUD operations for posts
- * - Create: Add new post
- * - Read: View all posts
- * - Update: Edit existing post
- * - Delete: Remove post
- *
- * This is the main feature of the application
+ * This version handles Strapi v4 API format and both plain text and rich text content
  */
 
 import React, { useState, useEffect } from 'react';
@@ -40,7 +25,7 @@ interface Post {
   id: number;
   documentId?: string;
   title: string;
-  content: string;
+  content: string | any; // Can be string or rich text array
   createdAt: string;
   updatedAt: string;
   publishedAt?: string;
@@ -48,152 +33,121 @@ interface Post {
 }
 
 /**
+ * UTILITY FUNCTION: Extract plain text from rich text content
+ *
+ * Strapi's rich text editor stores content as JSON array
+ * This function converts it to plain text
+ */
+const extractTextFromRichText = (content: any): string => {
+  // If content is already a string, return it
+  if (typeof content === 'string') {
+    return content;
+  }
+
+  // If content is null or undefined, return empty string
+  if (!content) {
+    return '';
+  }
+
+  // If content is an array (rich text format)
+  if (Array.isArray(content)) {
+    let text = '';
+
+    // Loop through each block
+    content.forEach((block: any) => {
+      if (block.children && Array.isArray(block.children)) {
+        // Loop through children and extract text
+        block.children.forEach((child: any) => {
+          if (child.text) {
+            text += child.text + ' ';
+          }
+        });
+      }
+    });
+
+    return text.trim();
+  }
+
+  // If we can't parse it, return empty string
+  return '';
+};
+
+/**
  * POSTS COMPONENT
  */
 const Posts: React.FC = () => {
-  /**
-   * HOOKS
-   */
-
-  // Get current user from auth context
-  // We'll use this to check if user can edit/delete posts
   const { user } = useAuth();
 
-  /**
-   * STATE MANAGEMENT
-   */
-
-  // Array of all posts
+  // State management
   const [posts, setPosts] = useState<Post[]>([]);
-
-  // Loading state for initial fetch
   const [loading, setLoading] = useState(true);
-
-  // Error message state
   const [error, setError] = useState<string | null>(null);
-
-  // Success message state
   const [success, setSuccess] = useState<string | null>(null);
 
-  /**
-   * CREATE/EDIT FORM STATE
-   */
-
-  // Is form visible? (for create/edit modal)
+  // Create/Edit form state
   const [showForm, setShowForm] = useState(false);
-
-  // Is this an edit operation? (vs create)
   const [isEditing, setIsEditing] = useState(false);
-
-  // ID of post being edited (null for create)
   const [editingPostId, setEditingPostId] = useState<number | null>(null);
-
-  // Form field values
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-
-  // Form loading state
   const [formLoading, setFormLoading] = useState(false);
 
   /**
-   * FETCH POSTS EFFECT
-   *
-   * Purpose: Load all posts when component mounts
-   *
-   * Runs once when page loads
+   * FETCH POSTS
    */
   useEffect(() => {
     fetchPosts();
-  }, []); // Empty dependency array = run once on mount
+  }, []);
 
-  /**
-   * FETCH POSTS FUNCTION
-   *
-   * Purpose: Get all posts from API
-   *
-   * Why separate function?
-   * - Can be called from multiple places
-   * - After creating/editing/deleting post
-   * - On initial load
-   */
   const fetchPosts = async () => {
     try {
-      // Call API to get all posts
       const data = await postService.getAllPosts();
+      console.log('📦 Raw posts data:', data);
 
-      // Update state with posts
-      setPosts(data);
+      // Process posts to extract plain text from rich text if needed
+      const processedPosts = data.map((post: Post) => ({
+        ...post,
+        content: extractTextFromRichText(post.content)
+      }));
 
-      // Clear any error
+      console.log('✅ Processed posts:', processedPosts);
+      setPosts(processedPosts);
       setError(null);
     } catch (err: any) {
-      // Show error message
+      console.error('❌ Error fetching posts:', err);
       setError(err.message || 'Failed to load posts');
     } finally {
-      // Stop loading spinner
       setLoading(false);
     }
   };
 
   /**
    * OPEN CREATE FORM
-   *
-   * Purpose: Show form in create mode
-   *
-   * How it works:
-   * 1. Clear form fields
-   * 2. Set isEditing to false
-   * 3. Show form modal
    */
   const handleCreateClick = () => {
-    // Reset form
     setTitle('');
     setContent('');
     setEditingPostId(null);
-
-    // Set to create mode
     setIsEditing(false);
-
-    // Show form
     setShowForm(true);
   };
 
   /**
    * OPEN EDIT FORM
-   *
-   * Purpose: Show form in edit mode with post data
-   *
-   * How it works:
-   * 1. Fill form fields with post data
-   * 2. Set isEditing to true
-   * 3. Store post ID for updating
-   * 4. Show form modal
-   *
-   * @param post - The post to edit
    */
   const handleEditClick = (post: Post) => {
-    // Fill form with post data
     setTitle(post.title);
-    setContent(post.content);
+    setContent(extractTextFromRichText(post.content)); // Extract text if rich text
     setEditingPostId(post.id);
-
-    // Set to edit mode
     setIsEditing(true);
-
-    // Show form
     setShowForm(true);
   };
 
   /**
    * CLOSE FORM
-   *
-   * Purpose: Hide form and reset state
    */
   const handleCloseForm = () => {
-    // Hide form
     setShowForm(false);
-
-    // Reset form state
     setTitle('');
     setContent('');
     setEditingPostId(null);
@@ -201,156 +155,82 @@ const Posts: React.FC = () => {
   };
 
   /**
-   * FORM SUBMIT HANDLER
-   *
-   * Purpose: Handle both create and edit operations
-   *
-   * How it works:
-   * 1. Validate input
-   * 2. Check if creating or editing
-   * 3. Call appropriate API function
-   * 4. Refresh posts list
-   * 5. Close form and show success message
-   *
-   * @param e - Form submit event
+   * FORM SUBMIT
    */
   const handleSubmit = async (e: React.FormEvent) => {
-    // Prevent page reload
     e.preventDefault();
 
-    // Validate title
     if (title.trim().length === 0) {
       setError('Title is required');
       return;
     }
 
-    // Validate content
     if (content.trim().length === 0) {
       setError('Content is required');
       return;
     }
 
-    // Set loading state
     setFormLoading(true);
 
     try {
       if (isEditing && editingPostId !== null) {
-        /**
-         * EDIT MODE
-         * Update existing post
-         */
         await postService.updatePost(editingPostId, {
           title: title.trim(),
           content: content.trim(),
         });
-
-        // Show success message
         setSuccess('Post updated successfully!');
       } else {
-        /**
-         * CREATE MODE
-         * Create new post
-         */
         await postService.createPost({
           title: title.trim(),
           content: content.trim(),
         });
-
-        // Show success message
         setSuccess('Post created successfully!');
       }
 
-      // Refresh posts list to show changes
       await fetchPosts();
-
-      // Close form
       handleCloseForm();
-
-      // Clear success message after 3 seconds
       setTimeout(() => setSuccess(null), 3000);
     } catch (err: any) {
-      // Show error message
+      console.error('❌ Error saving post:', err);
       setError(err.message || 'Failed to save post');
     } finally {
-      // Stop loading
       setFormLoading(false);
     }
   };
 
   /**
-   * DELETE POST HANDLER
-   *
-   * Purpose: Delete a post
-   *
-   * How it works:
-   * 1. Show confirmation dialog
-   * 2. If confirmed, call API to delete
-   * 3. Refresh posts list
-   * 4. Show success message
-   *
-   * @param postId - ID of post to delete
-   * @param postTitle - Title (for confirmation message)
+   * DELETE POST
    */
   const handleDelete = async (postId: number, postTitle: string) => {
-    // Confirm deletion
     const confirmed = window.confirm(
       `Are you sure you want to delete the post "${postTitle}"? This action cannot be undone.`
     );
 
-    // If cancelled, stop here
     if (!confirmed) {
       return;
     }
 
     try {
-      // Call API to delete post
       await postService.deletePost(postId);
-
-      // Remove post from local state
-      // Immediate UI update without refetching
       setPosts((prevPosts) => prevPosts.filter((post) => post.id !== postId));
-
-      // Show success message
       setSuccess('Post deleted successfully!');
-
-      // Clear success message after 3 seconds
       setTimeout(() => setSuccess(null), 3000);
     } catch (err: any) {
-      // Show error message
       setError(err.message || 'Failed to delete post');
     }
   };
 
   /**
-   * CHECK IF USER CAN EDIT/DELETE POST
-   *
-   * Purpose: Determine if current user owns the post
-   *
-   * Users can only edit/delete their own posts
-   *
-   * @param post - The post to check
-   * @returns true if user can edit/delete, false otherwise
+   * CHECK IF USER CAN MODIFY POST
    */
   const canModifyPost = (post: Post): boolean => {
-    // User must be logged in
     if (!user) return false;
-
-    // Post must have an author
     if (!post.author) return false;
-
-    // Check if current user is the author
     return user.id === post.author.id;
   };
 
   /**
    * FORMAT DATE
-   *
-   * Purpose: Convert ISO date string to readable format
-   *
-   * Example: "2024-01-15T10:30:00.000Z" → "January 15, 2024"
-   *
-   * @param dateString - ISO date string from Strapi
-   * @returns Formatted date string
    */
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString);
@@ -389,7 +269,6 @@ const Posts: React.FC = () => {
           </p>
         </div>
 
-        {/* Create Post Button */}
         <button
           onClick={handleCreateClick}
           className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded font-semibold transition"
@@ -401,7 +280,13 @@ const Posts: React.FC = () => {
       {/* Error Alert */}
       {error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-          {error}
+          <strong>Error:</strong> {error}
+          <button
+            onClick={() => setError(null)}
+            className="float-right font-bold"
+          >
+            ×
+          </button>
         </div>
       )}
 
@@ -412,15 +297,10 @@ const Posts: React.FC = () => {
         </div>
       )}
 
-      {/*
-        CREATE/EDIT FORM MODAL
-        Shown when showForm is true
-      */}
+      {/* CREATE/EDIT FORM MODAL */}
       {showForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          {/* Modal Card */}
           <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            {/* Modal Header */}
             <div className="flex justify-between items-center p-6 border-b">
               <h2 className="text-2xl font-bold text-gray-800">
                 {isEditing ? 'Edit Post' : 'Create New Post'}
@@ -433,9 +313,7 @@ const Posts: React.FC = () => {
               </button>
             </div>
 
-            {/* Modal Body - Form */}
             <form onSubmit={handleSubmit} className="p-6">
-              {/* Title Input */}
               <div className="mb-4">
                 <label
                   htmlFor="title"
@@ -454,7 +332,6 @@ const Posts: React.FC = () => {
                 />
               </div>
 
-              {/* Content Textarea */}
               <div className="mb-6">
                 <label
                   htmlFor="content"
@@ -473,7 +350,6 @@ const Posts: React.FC = () => {
                 />
               </div>
 
-              {/* Form Buttons */}
               <div className="flex space-x-3">
                 <button
                   type="submit"
@@ -503,49 +379,37 @@ const Posts: React.FC = () => {
         </div>
       )}
 
-      {/*
-        POSTS LIST
-        Display all posts in cards
-      */}
+      {/* POSTS LIST */}
       <div className="space-y-6">
-        {/* Check if there are any posts */}
         {posts.length === 0 ? (
           <div className="bg-white rounded-lg shadow p-8 text-center text-gray-500">
             <p className="text-lg">No posts yet</p>
             <p className="mt-2">Be the first to create a post!</p>
           </div>
         ) : (
-          // Map through posts and create a card for each
           posts.map((post) => (
             <div
               key={post.id}
               className="bg-white rounded-lg shadow hover:shadow-lg transition p-6"
             >
-              {/* Post Header - Title and Actions */}
               <div className="flex justify-between items-start mb-4">
                 <div className="flex-1">
                   <h2 className="text-2xl font-bold text-gray-800 mb-2">
                     {post.title}
                   </h2>
                   <div className="text-sm text-gray-500">
-                    {/* Author information */}
                     By{' '}
                     <span className="font-semibold">
-                      {post.author?.username || 'Unknown'}
+                      {post.author?.username || 'Unknown Author'}
                     </span>
                     {' • '}
                     {formatDate(post.createdAt)}
-                    {/* Show "edited" if post was updated */}
                     {post.updatedAt !== post.createdAt && (
                       <span className="ml-2 text-gray-400">(edited)</span>
                     )}
                   </div>
                 </div>
 
-                {/*
-                  Action Buttons (Edit/Delete)
-                  Only shown if user can modify this post
-                */}
                 {canModifyPost(post) && (
                   <div className="flex space-x-2 ml-4">
                     <button
@@ -564,7 +428,6 @@ const Posts: React.FC = () => {
                 )}
               </div>
 
-              {/* Post Content */}
               <div className="text-gray-700 whitespace-pre-wrap">
                 {post.content}
               </div>
@@ -576,37 +439,4 @@ const Posts: React.FC = () => {
   );
 };
 
-// Export component
 export default Posts;
-
-/**
- * LEARNING NOTES
- *
- * Modal Pattern:
- * - Fixed position with overlay (dark background)
- * - Centered content card
- * - Prevents interaction with background
- * - Can be closed with button or pressing outside (if implemented)
- *
- * Single Form for Create and Edit:
- * - Same form used for both operations
- * - isEditing flag determines behavior
- * - Reduces code duplication
- * - Consistent UI experience
- *
- * Optimistic UI Updates:
- * - After delete, immediately update local state
- * - Don't wait for refetch
- * - Faster user experience
- * - Reduces API calls
- *
- * Authorization:
- * - Check user ownership before showing edit/delete buttons
- * - Server should also verify (don't trust client-side only)
- * - Strapi policies handle server-side authorization
- *
- * Date Formatting:
- * - Use JavaScript Date object
- * - toLocaleDateString for readable format
- * - Can be customized with locales and options
- */
