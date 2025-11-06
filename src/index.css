@@ -1,0 +1,514 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/* src/index.css */
+
+/* ============================================
+   GLOBAL RESET
+   ============================================
+   Purpose: Remove browser default styles
+   Why: Browsers have different default styles
+   Result: Consistent look across all browsers
+*/
+* {
+  /* Remove all default margins and padding */
+  margin: 0;
+  padding: 0;
+  
+  /* Make box-sizing include padding and border in width/height */
+  /* Example: div with width:100px, padding:10px = still 100px total */
+  box-sizing: border-box;
+}
+
+/* ============================================
+   ROOT VARIABLES (CSS Custom Properties)
+   ============================================
+   Purpose: Define colors once, use everywhere
+   Why: Easy to change theme, maintain consistency
+   Usage: var(--primary-color)
+*/
+:root {
+  /* COLORS */
+  /* Primary brand color - used for main actions */
+  --primary-color: #4F46E5;        /* Indigo - main brand color */
+  --primary-hover: #4338CA;        /* Darker indigo - hover state */
+  --primary-light: #EEF2FF;        /* Very light indigo - backgrounds */
+  
+  /* Success color - used for positive actions */
+  --success-color: #10B981;        /* Green - create, success */
+  --success-hover: #059669;        /* Darker green - hover */
+  
+  /* Danger color - used for destructive actions */
+  --danger-color: #EF4444;         /* Red - delete, error */
+  --danger-hover: #DC2626;         /* Darker red - hover */
+  
+  /* Neutral colors - used for text, borders, backgrounds */
+  --text-primary: #111827;         /* Almost black - main text */
+  --text-secondary: #6B7280;       /* Gray - secondary text */
+  --text-light: #9CA3AF;           /* Light gray - hints, labels */
+  
+  --border-color: #E5E7EB;         /* Light gray - borders */
+  --background: #F9FAFB;           /* Very light gray - page background */
+  --card-background: #FFFFFF;      /* White - card backgrounds */
+  
+  /* SHADOWS */
+  /* Box shadows for depth and elevation */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  
+  /* SPACING */
+  /* Consistent spacing scale */
+  --spacing-xs: 0.25rem;  /* 4px */
+  --spacing-sm: 0.5rem;   /* 8px */
+  --spacing-md: 1rem;     /* 16px */
+  --spacing-lg: 1.5rem;   /* 24px */
+  --spacing-xl: 2rem;     /* 32px */
+  --spacing-2xl: 3rem;    /* 48px */
+  
+  /* BORDER RADIUS */
+  /* Consistent rounded corners */
+  --radius-sm: 0.25rem;   /* 4px - subtle rounding */
+  --radius-md: 0.5rem;    /* 8px - standard rounding */
+  --radius-lg: 0.75rem;   /* 12px - more rounding */
+  --radius-full: 9999px;  /* Fully rounded (pills) */
+  
+  /* TRANSITIONS */
+  /* Smooth animations */
+  --transition-fast: 150ms ease-in-out;
+  --transition-normal: 250ms ease-in-out;
+}
+
+/* ============================================
+   BODY STYLES
+   ============================================
+   Purpose: Set base styles for entire page
+   Why: Good typography and layout foundation
+*/
+body {
+  /* Font family stack - tries each font in order */
+  /* -apple-system: macOS/iOS system font */
+  /* BlinkMacSystemFont: macOS Chrome system font */
+  /* 'Segoe UI': Windows system font */
+  /* Roboto: Android system font */
+  /* sans-serif: Generic fallback */
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 
+               'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+  
+  /* Base font size - all rem units relative to this */
+  font-size: 16px;
+  
+  /* Line height for readability */
+  /* 1.6 = 160% of font size = good for body text */
+  line-height: 1.6;
+  
+  /* Text color */
+  color: var(--text-primary);
+  
+  /* Page background color */
+  background-color: var(--background);
+  
+  /* Smooth font rendering on macOS/iOS */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ============================================
+   HEADING STYLES
+   ============================================
+   Purpose: Consistent heading hierarchy
+   Why: Clear visual hierarchy, better readability
+*/
+h1, h2, h3, h4, h5, h6 {
+  /* Tighter line height for headings */
+  line-height: 1.2;
+  
+  /* Slightly bolder than body text */
+  font-weight: 600;
+  
+  /* Remove default margins */
+  margin: 0;
+  
+  /* Darker color for headings */
+  color: var(--text-primary);
+}
+
+h1 {
+  /* Largest heading */
+  font-size: 2.25rem; /* 36px */
+  font-weight: 700;   /* Bolder */
+}
+
+h2 {
+  font-size: 1.875rem; /* 30px */
+}
+
+h3 {
+  font-size: 1.5rem; /* 24px */
+}
+
+h4 {
+  font-size: 1.25rem; /* 20px */
+}
+
+/* ============================================
+   BUTTON STYLES
+   ============================================
+   Purpose: Consistent, beautiful buttons
+   Why: Buttons are primary interaction points
+*/
+button {
+  /* Remove default button styles */
+  border: none;
+  background: none;
+  
+  /* Inherit font from parent */
+  font-family: inherit;
+  font-size: inherit;
+  
+  /* Pointer cursor on hover */
+  cursor: pointer;
+  
+  /* Smooth transitions */
+  transition: all var(--transition-normal);
+}
+
+/* Base button class */
+.btn {
+  /* Display and sizing */
+  display: inline-flex;      /* Flexbox for icon + text */
+  align-items: center;       /* Vertically center content */
+  justify-content: center;   /* Horizontally center content */
+  gap: var(--spacing-sm);    /* Space between icon and text */
+  
+  /* Spacing */
+  padding: var(--spacing-sm) var(--spacing-lg);
+  
+  /* Typography */
+  font-weight: 500;
+  font-size: 0.875rem; /* 14px */
+  
+  /* Borders */
+  border-radius: var(--radius-md);
+  
+  /* Remove text decoration */
+  text-decoration: none;
+  
+  /* Transitions */
+  transition: all var(--transition-normal);
+  
+  /* No text selection when clicking */
+  user-select: none;
+}
+
+/* Primary button (main actions) */
+.btn-primary {
+  background-color: var(--primary-color);
+  color: white;
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-primary:hover {
+  /* Darker on hover */
+  background-color: var(--primary-hover);
+  
+  /* Lift up slightly */
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-primary:active {
+  /* Press down when clicked */
+  transform: translateY(0);
+}
+
+.btn-primary:disabled {
+  /* Disabled state */
+  background-color: var(--text-light);
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Success button (create actions) */
+.btn-success {
+  background-color: var(--success-color);
+  color: white;
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-success:hover {
+  background-color: var(--success-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+/* Danger button (delete actions) */
+.btn-danger {
+  background-color: var(--danger-color);
+  color: white;
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-danger:hover {
+  background-color: var(--danger-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+/* Secondary button (less important actions) */
+.btn-secondary {
+  background-color: var(--card-background);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+.btn-secondary:hover {
+  background-color: var(--background);
+  border-color: var(--text-secondary);
+}
+
+/* Large button variant */
+.btn-lg {
+  padding: var(--spacing-md) var(--spacing-xl);
+  font-size: 1rem;
+}
+
+/* Small button variant */
+.btn-sm {
+  padding: var(--spacing-xs) var(--spacing-md);
+  font-size: 0.75rem;
+}
+
+/* ============================================
+   INPUT STYLES
+   ============================================
+   Purpose: Beautiful, consistent form inputs
+   Why: Forms are main user interaction
+*/
+input[type="text"],
+input[type="email"],
+input[type="password"],
+textarea {
+  /* Display */
+  display: block;
+  width: 100%;
+  
+  /* Spacing */
+  padding: var(--spacing-sm) var(--spacing-md);
+  
+  /* Typography */
+  font-family: inherit;
+  font-size: 0.875rem;
+  
+  /* Borders */
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  
+  /* Colors */
+  background-color: var(--card-background);
+  color: var(--text-primary);
+  
+  /* Transitions */
+  transition: all var(--transition-normal);
+}
+
+/* Focus state (when user clicks input) */
+input:focus,
+textarea:focus {
+  /* Remove default browser outline */
+  outline: none;
+  
+  /* Add custom border color */
+  border-color: var(--primary-color);
+  
+  /* Add subtle glow */
+  box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+/* Placeholder text */
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-light);
+}
+
+/* Disabled state */
+input:disabled,
+textarea:disabled {
+  background-color: var(--background);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* ============================================
+   CARD STYLES
+   ============================================
+   Purpose: Container for content sections
+   Why: Visual grouping, hierarchy
+*/
+.card {
+  /* Background */
+  background-color: var(--card-background);
+  
+  /* Borders */
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  
+  /* Spacing */
+  padding: var(--spacing-xl);
+  
+  /* Shadow for depth */
+  box-shadow: var(--shadow-sm);
+  
+  /* Transitions */
+  transition: all var(--transition-normal);
+}
+
+.card:hover {
+  /* Lift on hover */
+  box-shadow: var(--shadow-md);
+}
+
+/* ============================================
+   CONTAINER STYLES
+   ============================================
+   Purpose: Center content with max width
+   Why: Prevent text from being too wide
+*/
+.container {
+  /* Max width for readability */
+  max-width: 1200px;
+  
+  /* Center horizontally */
+  margin-left: auto;
+  margin-right: auto;
+  
+  /* Spacing */
+  padding-left: var(--spacing-lg);
+  padding-right: var(--spacing-lg);
+}
+
+.container-sm {
+  max-width: 600px;
+}
+
+.container-md {
+  max-width: 900px;
+}
+
+/* ============================================
+   ALERT STYLES
+   ============================================
+   Purpose: Show success/error messages
+   Why: User feedback
+*/
+.alert {
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--spacing-md);
+  font-size: 0.875rem;
+}
+
+.alert-success {
+  background-color: #D1FAE5;
+  color: #065F46;
+  border: 1px solid #10B981;
+}
+
+.alert-error {
+  background-color: #FEE2E2;
+  color: #991B1B;
+  border: 1px solid #EF4444;
+}
+
+.alert-info {
+  background-color: var(--primary-light);
+  color: #3730A3;
+  border: 1px solid var(--primary-color);
+}
+
+/* ============================================
+   UTILITY CLASSES
+   ============================================
+   Purpose: Quick styling helpers
+   Why: Speed up development
+*/
+
+/* Spacing utilities */
+.mt-1 { margin-top: var(--spacing-sm); }
+.mt-2 { margin-top: var(--spacing-md); }
+.mt-3 { margin-top: var(--spacing-lg); }
+.mt-4 { margin-top: var(--spacing-xl); }
+
+.mb-1 { margin-bottom: var(--spacing-sm); }
+.mb-2 { margin-bottom: var(--spacing-md); }
+.mb-3 { margin-bottom: var(--spacing-lg); }
+.mb-4 { margin-bottom: var(--spacing-xl); }
+
+/* Flexbox utilities */
+.flex {
+  display: flex;
+}
+
+.flex-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.items-center {
+  align-items: center;
+}
+
+.justify-between {
+  justify-content: space-between;
+}
+
+.justify-center {
+  justify-content: center;
+}
+
+.gap-1 { gap: var(--spacing-sm); }
+.gap-2 { gap: var(--spacing-md); }
+.gap-3 { gap: var(--spacing-lg); }
+
+/* Text utilities */
+.text-center {
+  text-align: center;
+}
+
+.text-sm {
+  font-size: 0.875rem;
+}
+
+.text-lg {
+  font-size: 1.125rem;
+}
+
+.text-secondary {
+  color: var(--text-secondary);
+}
+
+.text-light {
+  color: var(--text-light);
+}
+
+/* Width utilities */
+.w-full {
+  width: 100%;
+}
+
+/* Loading spinner */
+.spinner {
+  border: 3px solid var(--border-color);
+  border-top: 3px solid var(--primary-color);
+  border-radius: var(--radius-full);
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
