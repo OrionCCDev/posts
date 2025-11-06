@@ -1,363 +1,329 @@
-// src/api/services/postService.ts
-import api from '../interceptors';
-import { StrapiCollectionResponse } from '../../types/user.types';
-import { Post, FlatPost } from '../../types/post.types';
+/**
+ * POST SERVICE
+ *
+ * Purpose: Handle all post-related CRUD operations
+ *
+ * What are posts?
+ * - Content created by users (like blog posts, articles, status updates)
+ * - Each post has a title, content, and is linked to a user (author)
+ *
+ * This service manages posts through the Strapi API
+ */
 
-// ============================================
-// HELPER FUNCTION: FLATTEN STRAPI POST
-// ============================================
-// Purpose: Convert Strapi's nested structure to flat structure
-// Why: Easier to work with in React components
-// Input: Strapi post with nested data.attributes
-// Output: Flat post with direct properties
+import axiosInstance from '../axios';
 
-/*
-STRAPI STRUCTURE (nested):
-{
-  id: 1,
-  attributes: {
-    title: "Post Title",
-    content: "Content...",
-    author: {
-      data: {
-        id: 1,
-        attributes: {
-          username: "john",
-          email: "john@example.com"
-        }
-      }
-    }
-  }
+/**
+ * TypeScript INTERFACES
+ *
+ * Define the structure of post-related data
+ */
+
+// Interface for user data (simplified version)
+interface User {
+  id: number;
+  username: string;
+  email: string;
 }
 
-FLAT STRUCTURE (easier):
-{
-  id: 1,
-  title: "Post Title",
-  content: "Content...",
-  author: {
-    id: 1,
-    username: "john",
-    email: "john@example.com"
-  }
+// Interface for a Post
+// This matches what Strapi returns
+interface Post {
+  id: number;              // Unique post ID
+  documentId?: string;     // Strapi's document ID (Strapi v4+)
+  title: string;           // Post title
+  content: string;         // Post content/body
+  createdAt: string;       // When post was created (ISO date string)
+  updatedAt: string;       // When post was last updated
+  publishedAt?: string;    // When post was published (optional)
+  author?: User;           // User who created the post
 }
-*/
 
-const flattenPost = (strapiPost: any): FlatPost => {
-  return {
-    // ID is at root level
-    id: strapiPost.id,
-    
-    // All other fields in attributes
-    title: strapiPost.attributes.title,
-    content: strapiPost.attributes.content,
-    createdAt: strapiPost.attributes.createdAt,
-    updatedAt: strapiPost.attributes.updatedAt,
-    publishedAt: strapiPost.attributes.publishedAt,
-    
-    // Flatten author if exists
-    // Optional chaining (?.) prevents errors if author is null
-    author: strapiPost.attributes.author?.data
-      ? {
-          id: strapiPost.attributes.author.data.id,
-          // Spread operator (...) copies all properties
-          ...strapiPost.attributes.author.data.attributes,
-        }
-      : undefined,
-  };
-};
+// Interface for creating a new post
+interface CreatePostData {
+  title: string;    // Post title
+  content: string;  // Post content
+}
 
-// ============================================
-// POST SERVICE
-// ============================================
-// Purpose: Handle all post-related API operations
-// Why: CRUD operations for posts, centralized logic
+// Interface for updating a post
+interface UpdatePostData {
+  title?: string;   // Optional: new title
+  content?: string; // Optional: new content
+}
 
-export const postService = {
-  
-  // ==========================================
-  // GET ALL POSTS
-  // ==========================================
-  // Purpose: Fetch all posts with author information
-  // Endpoint: GET /api/posts?populate=author
-  // Returns: Promise<FlatPost[]> (flattened array)
-  // Query parameter ?populate=author tells Strapi to include author relation
-  getAll: async (): Promise<FlatPost[]> => {
+// Interface for Strapi's API response format
+// Strapi v4 wraps data in { data: ... } format
+interface StrapiResponse<T> {
+  data: T;         // The actual data
+  meta?: any;      // Metadata (pagination, etc.)
+}
+
+/**
+ * POST SERVICE OBJECT
+ *
+ * Contains all functions for post management
+ */
+const postService = {
+  /**
+   * GET ALL POSTS FUNCTION
+   *
+   * Purpose: Fetch all posts from the database
+   *
+   * How it works:
+   * 1. Make GET request to /api/posts
+   * 2. Include 'populate' parameter to get author information too
+   * 3. Strapi returns array of posts with author data
+   * 4. Return the posts
+   *
+   * What is 'populate'?
+   * - Strapi feature to include related data
+   * - Without it, we only get the author ID
+   * - With it, we get full author information (username, email, etc.)
+   *
+   * When to use:
+   * - Displaying list of all posts on home page
+   * - Posts feed
+   *
+   * @returns Promise with array of posts
+   */
+  getAllPosts: async (): Promise<Post[]> => {
     try {
-      // ----------------------------------------
-      // STRAPI POPULATE PARAMETER
-      // ----------------------------------------
-      // Purpose: Include related data in response
-      // Without populate: author field is null
-      // With populate=author: author data included
-      // Syntax: ?populate=fieldName
-      // Multiple: ?populate[0]=author&populate[1]=comments
-      
-      const response = await api.get<StrapiCollectionResponse<Post>>(
-        '/posts?populate=author'
+      // Make GET request with query parameters
+      // populate=author tells Strapi to include author information
+      const response = await axiosInstance.get<StrapiResponse<Post[]>>(
+        '/api/posts?populate=author'
       );
 
-      // ----------------------------------------
-      // TRANSFORM STRAPI RESPONSE
-      // ----------------------------------------
-      // response.data.data is array of Strapi posts
-      // .map() transforms each post
-      // flattenPost() converts Strapi structure to flat structure
-      return response.data.data.map(flattenPost);
-    } catch (error) {
-      console.error('Failed to fetch posts:', error);
-      throw error;
+      // Strapi v4 wraps data in { data: ... } format
+      // Extract the actual posts array
+      return response.data.data;
+    } catch (error: any) {
+      // Log error for debugging
+      console.error('Error fetching posts:', error);
+
+      const errorMessage =
+        error.response?.data?.error?.message || 'Failed to fetch posts';
+
+      throw new Error(errorMessage);
     }
   },
 
-  // ==========================================
-  // GET POSTS BY USER
-  // ==========================================
-  // Purpose: Fetch posts created by specific user
-  // Endpoint: GET /api/posts?filters[author][id][$eq]=userId&populate=author
-  // Parameters: userId (author ID to filter by)
-  // Returns: Promise<FlatPost[]>
-  getByUser: async (userId: number): Promise<FlatPost[]> => {
+  /**
+   * GET POST BY ID FUNCTION
+   *
+   * Purpose: Fetch a specific post by its ID
+   *
+   * How it works:
+   * 1. Make GET request to /api/posts/:id
+   * 2. Include author data with populate
+   * 3. Strapi returns the specific post
+   * 4. Return the post
+   *
+   * When to use:
+   * - Viewing a single post page
+   * - Getting post details before editing
+   *
+   * @param id - The ID of the post to fetch
+   * @returns Promise with post data
+   */
+  getPostById: async (id: number): Promise<Post> => {
     try {
-      // ----------------------------------------
-      // STRAPI FILTERING
-      // ----------------------------------------
-      // Purpose: Filter results based on criteria
-      // Syntax: filters[field][subfield][operator]=value
-      // [author][id][$eq]=userId means:
-      //   - Filter by author relation
-      //   - Where author's id
-      //   - Equals userId
-      // $eq = equals operator (Strapi uses $ prefix for operators)
-      
-      // Other operators:
-      // $ne = not equal
-      // $gt = greater than
-      // $lt = less than
-      // $contains = contains text
-      
-      const response = await api.get<StrapiCollectionResponse<Post>>(
-        `/posts?filters[author][id][$eq]=${userId}&populate=author`
+      // Make GET request with post ID in URL
+      const response = await axiosInstance.get<StrapiResponse<Post>>(
+        `/api/posts/${id}?populate=author`
       );
 
-      return response.data.data.map(flattenPost);
-    } catch (error) {
-      console.error('Failed to fetch user posts:', error);
-      throw error;
+      // Extract the post from response
+      return response.data.data;
+    } catch (error: any) {
+      console.error('Error fetching post:', error);
+
+      const errorMessage =
+        error.response?.data?.error?.message || 'Failed to fetch post';
+
+      throw new Error(errorMessage);
     }
   },
 
-  // ==========================================
-  // GET SINGLE POST BY ID
-  // ==========================================
-  // Purpose: Fetch one specific post
-  // Endpoint: GET /api/posts/:id?populate=author
-  // Parameters: id (post ID)
-  // Returns: Promise<FlatPost>
-  getById: async (id: number): Promise<FlatPost> => {
+  /**
+   * GET POSTS BY USER FUNCTION
+   *
+   * Purpose: Fetch all posts created by a specific user
+   *
+   * How it works:
+   * 1. Make GET request to /api/posts
+   * 2. Add filter for specific author ID
+   * 3. Strapi returns only posts by that user
+   * 4. Return filtered posts
+   *
+   * What are filters?
+   * - Query parameters that filter results
+   * - Like saying "only show posts where author.id = 5"
+   *
+   * When to use:
+   * - User profile page showing their posts
+   * - "My posts" section
+   *
+   * @param userId - The ID of the user whose posts to fetch
+   * @returns Promise with array of posts
+   */
+  getPostsByUser: async (userId: number): Promise<Post[]> => {
     try {
-      // Single item response structure is slightly different
-      // Returns: { data: { id, attributes: {...} } }
-      // Not an array, just one object
-      const response = await api.get<{ data: any }>(
-        `/posts/${id}?populate=author`
+      // Make GET request with filter parameter
+      // filters[author][id][$eq] means "where author.id equals userId"
+      // $eq is Strapi's "equals" operator
+      const response = await axiosInstance.get<StrapiResponse<Post[]>>(
+        `/api/posts?filters[author][id][$eq]=${userId}&populate=author`
       );
 
-      // Flatten single post
-      return flattenPost(response.data.data);
-    } catch (error) {
-      console.error('Failed to fetch post:', error);
-      throw error;
+      return response.data.data;
+    } catch (error: any) {
+      console.error('Error fetching user posts:', error);
+
+      const errorMessage =
+        error.response?.data?.error?.message || 'Failed to fetch user posts';
+
+      throw new Error(errorMessage);
     }
   },
 
-  // ==========================================
-  // CREATE POST
-  // ==========================================
-  // Purpose: Create new post
-  // Endpoint: POST /api/posts
-  // Parameters: postData (title, content)
-  // Returns: Promise<FlatPost> (created post)
-  // Auth: Token required (user must be logged in)
-  create: async (postData: Omit<Post, 'id'>): Promise<FlatPost> => {
+  /**
+   * CREATE POST FUNCTION
+   *
+   * Purpose: Create a new post
+   *
+   * How it works:
+   * 1. Make POST request to /api/posts with post data
+   * 2. Strapi automatically links post to authenticated user
+   * 3. Strapi creates post in database
+   * 4. Returns the created post
+   *
+   * Important:
+   * - User must be authenticated (token in header)
+   * - Strapi determines author from the token
+   * - We don't manually set the author
+   *
+   * When to use:
+   * - User creating a new post
+   * - "Create Post" form submission
+   *
+   * @param data - Object with title and content
+   * @returns Promise with created post data
+   */
+  createPost: async (data: CreatePostData): Promise<Post> => {
     try {
-      // ----------------------------------------
-      // GET CURRENT USER
-      // ----------------------------------------
-      // Purpose: Set current user as post author
-      // Get user from localStorage (saved during login)
-      const userStr = localStorage.getItem('user');
-      const user = userStr ? JSON.parse(userStr) : null;
+      // Make POST request with post data
+      // Strapi v4 expects data wrapped in { data: ... }
+      const response = await axiosInstance.post<StrapiResponse<Post>>(
+        '/api/posts',
+        { data }  // Wrap data as required by Strapi v4
+      );
 
-      // ----------------------------------------
-      // STRAPI CREATE FORMAT
-      // ----------------------------------------
-      // Strapi requires data to be wrapped in { data: {...} }
-      // This is Strapi v4 convention
-      // Content must be nested inside "data" key
-      
-      const response = await api.post<{ data: any }>('/posts', {
-        data: {
-          title: postData.title,
-          content: postData.content,
-          author: user.id,  // Connect to current user by ID
-        },
-      });
+      console.log('Post created successfully:', response.data);
 
-      // Flatten and return created post
-      return flattenPost(response.data.data);
-    } catch (error) {
-      console.error('Failed to create post:', error);
-      throw error;
+      return response.data.data;
+    } catch (error: any) {
+      // Enhanced error logging for debugging
+      console.error('Error creating post:', error);
+      console.error('Error response:', error.response?.data);
+
+      // Extract detailed error message from Strapi response
+      const errorMessage =
+        error.response?.data?.error?.message ||
+        error.response?.data?.message ||
+        'Failed to create post';
+
+      throw new Error(errorMessage);
     }
   },
 
-  // ==========================================
-  // UPDATE POST
-  // ==========================================
-  // Purpose: Update existing post
-  // Endpoint: PUT /api/posts/:id
-  // Parameters:
-  //   - id: post ID to update
-  //   - postData: fields to update
-  // Returns: Promise<FlatPost> (updated post)
-  // Note: User can only update their own posts (Strapi checks ownership)
-  update: async (id: number, postData: Partial<Post>): Promise<FlatPost> => {
+  /**
+   * UPDATE POST FUNCTION
+   *
+   * Purpose: Modify an existing post
+   *
+   * How it works:
+   * 1. Make PUT request to /api/posts/:id with new data
+   * 2. Strapi updates the post in database
+   * 3. Returns updated post data
+   *
+   * Security:
+   * - User can only update their own posts
+   * - Strapi checks if authenticated user is the post author
+   *
+   * When to use:
+   * - User editing their post
+   * - Updating post content or title
+   *
+   * @param id - The ID of the post to update
+   * @param data - Object with fields to update (title, content)
+   * @returns Promise with updated post data
+   */
+  updatePost: async (id: number, data: UpdatePostData): Promise<Post> => {
     try {
-      // PUT request updates entire resource
-      // Data must be wrapped in { data: {...} }
-      const response = await api.put<{ data: any }>(`/posts/${id}`, {
-        data: postData,
-      });
+      // Make PUT request with post ID and new data
+      // PUT is for updating existing resources
+      const response = await axiosInstance.put<StrapiResponse<Post>>(
+        `/api/posts/${id}`,
+        { data }  // Wrap data for Strapi v4
+      );
 
-      return flattenPost(response.data.data);
-    } catch (error) {
-      console.error('Failed to update post:', error);
-      throw error;
+      console.log('Post updated successfully:', response.data);
+
+      return response.data.data;
+    } catch (error: any) {
+      console.error('Error updating post:', error);
+
+      const errorMessage =
+        error.response?.data?.error?.message || 'Failed to update post';
+
+      throw new Error(errorMessage);
     }
   },
 
-  // ==========================================
-  // DELETE POST
-  // ==========================================
-  // Purpose: Delete post
-  // Endpoint: DELETE /api/posts/:id
-  // Parameters: id (post ID to delete)
-  // Returns: Promise<void> (nothing)
-  // Note: User can only delete their own posts
-  delete: async (id: number): Promise<void> => {
+  /**
+   * DELETE POST FUNCTION
+   *
+   * Purpose: Remove a post from the database
+   *
+   * How it works:
+   * 1. Make DELETE request to /api/posts/:id
+   * 2. Strapi removes post from database
+   * 3. Returns success status
+   *
+   * Security:
+   * - User can only delete their own posts
+   * - Strapi verifies post ownership
+   *
+   * Important:
+   * - This permanently deletes the post
+   * - Cannot be undone
+   *
+   * When to use:
+   * - User deleting their post
+   * - "Delete" button click
+   *
+   * @param id - The ID of the post to delete
+   * @returns Promise that resolves when deletion is complete
+   */
+  deletePost: async (id: number): Promise<void> => {
     try {
-      // DELETE request removes resource
-      // No response body typically
-      await api.delete(`/posts/${id}`);
-    } catch (error) {
-      console.error('Failed to delete post:', error);
-      throw error;
+      // Make DELETE request with post ID
+      await axiosInstance.delete(`/api/posts/${id}`);
+
+      console.log('Post deleted successfully');
+
+      // No return value needed
+      // Success means post was deleted
+    } catch (error: any) {
+      console.error('Error deleting post:', error);
+
+      const errorMessage =
+        error.response?.data?.error?.message || 'Failed to delete post';
+
+      throw new Error(errorMessage);
     }
   },
 };
 
-// ============================================
-// HOW TO USE POST SERVICE
-// ============================================
-/*
-In a component:
-
-import { postService } from './api/services/postService';
-
-// Get all posts
-const loadPosts = async () => {
-  const posts = await postService.getAll();
-  console.log('Posts:', posts);
-  setPosts(posts);
-};
-
-// Get user's posts
-const loadMyPosts = async () => {
-  const currentUser = JSON.parse(localStorage.getItem('user'));
-  const myPosts = await postService.getByUser(currentUser.id);
-  console.log('My posts:', myPosts);
-};
-
-// Create post
-const createPost = async () => {
-  const newPost = await postService.create({
-    title: 'My New Post',
-    content: 'Post content here...'
-  });
-  console.log('Created:', newPost);
-};
-
-// Update post
-const updatePost = async (postId: number) => {
-  const updated = await postService.update(postId, {
-    title: 'Updated Title'
-  });
-  console.log('Updated:', updated);
-};
-
-// Delete post
-const deletePost = async (postId: number) => {
-  await postService.delete(postId);
-  console.log('Deleted post:', postId);
-};
-*/
-
-// ============================================
-// STRAPI RELATIONSHIPS EXPLAINED
-// ============================================
-/*
-WHAT IS A RELATION?
-===================
-A relation connects two content types
-Example: Post → Author (User)
-
-In Strapi:
-- Post has "author" field
-- Type: Relation
-- Target: User
-- Cardinality: Many-to-One (many posts, one author)
-
-HOW IT WORKS:
-=============
-1. Create Post in Strapi admin
-2. Select author from dropdown
-3. Strapi stores author ID in post
-4. When you fetch post, you can populate author data
-
-WITHOUT POPULATE:
-{
-  id: 1,
-  title: "Post",
-  author: null  // Just null
-}
-
-WITH POPULATE:
-{
-  id: 1,
-  title: "Post",
-  author: {
-    data: {
-      id: 1,
-      attributes: {
-        username: "john",
-        email: "john@example.com"
-      }
-    }
-  }
-}
-
-POPULATE OPTIONS:
-=================
-// Populate one field
-?populate=author
-
-// Populate multiple fields
-?populate[0]=author&populate[1]=comments
-
-// Populate nested relations
-?populate[author][populate][0]=avatar
-
-// Populate all fields (not recommended for performance)
-?populate=*
-*/
+// Export the service for use in other files
+export default postService;

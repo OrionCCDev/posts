@@ -1,211 +1,150 @@
-// src/components/ProtectedRoute.tsx
+/**
+ * PROTECTED ROUTE COMPONENT
+ *
+ * Purpose: Protect certain pages from unauthorized access
+ *
+ * What does this component do?
+ * - Checks if user is logged in before showing a page
+ * - If logged in: shows the requested page
+ * - If not logged in: redirects to login page
+ *
+ * Where to use:
+ * - Wrap any route that requires authentication
+ * - Example: Profile page, Create Post page, Users page
+ *
+ * Example usage:
+ * ```
+ * <Route path="/profile" element={
+ *   <ProtectedRoute>
+ *     <ProfilePage />
+ *   </ProtectedRoute>
+ * } />
+ * ```
+ */
+
+import React from 'react';
 import { Navigate } from 'react-router-dom';
-import { authService } from '../api/services/authService';
+import { useAuth } from '../contexts/AuthContext';
 
-// ============================================
-// WHAT IS A PROTECTED ROUTE?
-// ============================================
-/*
-Purpose: Prevent unauthorized users from accessing pages
-Think of it like a bouncer at a club:
-- Has ticket (auth token) → Enter
-- No ticket → Go to ticket booth (login)
-
-Benefits:
-- Security: Only logged-in users see protected content
-- UX: Automatic redirect to login
-- Reusability: Wrap any component to protect it
-- Declarative: Clear which routes need auth
-
-Without ProtectedRoute (bad):
-function Dashboard() {
-  useEffect(() => {
-    if (!isAuthenticated()) navigate('/login');
-  }, []);
-  // ... rest of component
-}
-// Must remember to add this to EVERY protected component
-
-With ProtectedRoute (good):
-<ProtectedRoute>
-  <Dashboard />
-</ProtectedRoute>
-// Protection handled automatically
-*/
-
-// ============================================
-// PROPS INTERFACE
-// ============================================
-// Purpose: Define what props this component accepts
-// children: The component(s) to protect
-// React.ReactNode: Any valid React content (components, elements, text, etc.)
+/**
+ * TypeScript INTERFACE for Props
+ *
+ * What are props?
+ * - Data passed to a component from its parent
+ * - Like function parameters but for components
+ *
+ * This component accepts:
+ * - children: The component/page to protect
+ */
 interface ProtectedRouteProps {
-  children: React.ReactNode;
+  children: React.ReactNode;  // The component to render if authenticated
 }
 
-// ============================================
-// PROTECTED ROUTE COMPONENT
-// ============================================
-// Purpose: Wrapper component that checks authentication
-// Parameters: { children } - destructured props
-// Returns: children if authenticated, Navigate to login if not
+/**
+ * PROTECTED ROUTE COMPONENT
+ *
+ * This is a wrapper component that checks authentication
+ */
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
+  /**
+   * GET AUTHENTICATION STATE
+   *
+   * useAuth hook gives us:
+   * - user: Current user data (null if not logged in)
+   * - loading: Is auth state still being checked?
+   */
+  const { user, loading } = useAuth();
 
-const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
-  
-  // ==========================================
-  // CHECK AUTHENTICATION
-  // ==========================================
-  // Purpose: Determine if user is logged in
-  // authService.isAuthenticated() checks for token in localStorage
-  // Returns boolean: true (has token) or false (no token)
-  const isAuthenticated = authService.isAuthenticated();
+  /**
+   * LOADING STATE
+   *
+   * Why do we need this?
+   * - When app first loads, we check if user is logged in (from localStorage)
+   * - This check takes a moment
+   * - Without loading state, user would briefly see login page
+   * - Then redirect to home if they're logged in
+   * - This causes a flash/flicker
+   *
+   * Solution:
+   * - Show loading message while checking
+   * - Once checked, show appropriate page
+   */
+  if (loading) {
+    return (
+      // Loading screen
+      // Centered div with loading message
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          {/* Loading spinner animation */}
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
 
-  // ==========================================
-  // CONDITIONAL RENDERING
-  // ==========================================
-  // Purpose: Show different content based on auth status
-  
-  // If NOT authenticated (no token)
-  if (!isAuthenticated) {
-    // <Navigate> component from react-router-dom
-    // Programmatically redirects user to different route
-    // to="/login" - destination URL
-    // replace - replaces current history entry instead of adding new one
-    
-    // WHY replace?
-    // Without replace:
-    // User goes to /dashboard → redirected to /login → logs in → presses back → redirected to /login (loop!)
-    // With replace:
-    // User goes to /dashboard → redirected to /login (dashboard removed from history) → logs in → presses back → previous page (no loop)
+          {/* Loading text */}
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  /**
+   * AUTHENTICATION CHECK
+   *
+   * After loading is done, check if user is logged in
+   *
+   * If no user (not logged in):
+   * - Redirect to login page using Navigate component
+   * - replace prop removes current page from history
+   *   (user can't press back button to return to protected page)
+   *
+   * If user exists (logged in):
+   * - Render the protected page (children)
+   */
+  if (!user) {
+    // User not logged in - redirect to login page
     return <Navigate to="/login" replace />;
   }
 
-  // If authenticated (has token)
-  // Return children (the protected component)
-  // <></> = React Fragment (wrapper that doesn't add DOM element)
-  // Alternative: return children; (also valid)
+  /**
+   * RENDER PROTECTED CONTENT
+   *
+   * User is authenticated - show the protected page
+   * {children} renders whatever component was wrapped by ProtectedRoute
+   */
   return <>{children}</>;
 };
 
-// ============================================
-// EXPORT
-// ============================================
-// Default export - can be imported with any name
-// import ProtectedRoute from './components/ProtectedRoute'
-// import AuthGuard from './components/ProtectedRoute' (also works)
+// Export component for use in routing
 export default ProtectedRoute;
 
-// ============================================
-// HOW IT'S USED IN ROUTER
-// ============================================
-/*
-In router.tsx:
-
-import ProtectedRoute from './components/ProtectedRoute';
-
-{
-  path: '/dashboard',
-  element: (
-    <ProtectedRoute>
-      <Dashboard />
-    </ProtectedRoute>
-  )
-}
-
-FLOW:
-1. User navigates to /dashboard
-2. Router renders <ProtectedRoute><Dashboard /></ProtectedRoute>
-3. ProtectedRoute checks isAuthenticated()
-4a. If true: renders <Dashboard /> (user sees dashboard)
-4b. If false: renders <Navigate to="/login" /> (redirected to login)
-
-NESTING:
-ProtectedRoute (wrapper)
-  └── Dashboard (children)
-
-children prop = everything between opening and closing tags
-<ProtectedRoute>
-  THIS IS CHILDREN
-</ProtectedRoute>
-*/
-
-// ============================================
-// ALTERNATIVE IMPLEMENTATIONS
-// ============================================
-/*
-BASIC VERSION (What we use):
-- Just checks if token exists
-- Simple and fast
-- Good for most apps
-
-ENHANCED VERSION (Optional):
-const ProtectedRoute = ({ children, requiredRole }) => {
-  const isAuthenticated = authService.isAuthenticated();
-  const user = authService.getCurrentUserLocal();
-  
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-  
-  if (requiredRole && user.role !== requiredRole) {
-    return <Navigate to="/unauthorized" replace />;
-  }
-  
-  return <>{children}</>;
-};
-
-Usage:
-<ProtectedRoute requiredRole="admin">
-  <AdminPanel />
-</ProtectedRoute>
-
-LAYOUT VERSION:
-const ProtectedRoute = ({ children }) => {
-  const isAuthenticated = authService.isAuthenticated();
-  
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-  
-  return (
-    <MainLayout>
-      {children}
-    </MainLayout>
-  );
-};
-
-All protected pages get same layout automatically
-*/
-
-// ============================================
-// TESTING PROTECTED ROUTE
-// ============================================
-/*
-TEST 1: Not Logged In
-- Clear localStorage
-- Go to /dashboard
-- Should redirect to /login
-- URL should be /login
-
-TEST 2: Logged In
-- Login first
-- Token saved to localStorage
-- Go to /dashboard
-- Should see Dashboard content
-- URL should be /dashboard
-
-TEST 3: Token Expires
-- Login
-- Remove token from localStorage
-- Refresh page
-- Should redirect to /login
-- Interceptor also handles this (401 response)
-
-TEST 4: Back Button After Logout
-- Login and go to dashboard
-- Logout
-- Press back button
-- Should NOT see dashboard
-- Should redirect to login
-- Because replace=true removed dashboard from history
-*/
+/**
+ * HOW THIS COMPONENT WORKS - STEP BY STEP EXAMPLE
+ *
+ * Scenario: User tries to access Profile page
+ *
+ * 1. App starts
+ *    - loading = true (checking auth state)
+ *    - Shows "Loading..." message
+ *
+ * 2. Auth check completes (found user in localStorage)
+ *    - loading = false
+ *    - user = { id: 1, username: "john", ... }
+ *
+ * 3. ProtectedRoute checks:
+ *    - loading? No (false)
+ *    - user? Yes (exists)
+ *    - Result: Show Profile page ✓
+ *
+ * Alternative Scenario: Not logged in
+ *
+ * 1. App starts
+ *    - loading = true
+ *    - Shows "Loading..."
+ *
+ * 2. Auth check completes (no user in localStorage)
+ *    - loading = false
+ *    - user = null
+ *
+ * 3. ProtectedRoute checks:
+ *    - loading? No (false)
+ *    - user? No (null)
+ *    - Result: Redirect to /login ✗
+ */

@@ -1,397 +1,253 @@
-// src/pages/Login.tsx
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { authService } from '../api/services/authService';
+/**
+ * LOGIN PAGE
+ *
+ * Purpose: Allow users to log into the application
+ *
+ * What does this page do?
+ * - Display a login form (username/email and password)
+ * - Validate user input
+ * - Send credentials to Strapi for authentication
+ * - Redirect to home page on successful login
+ * - Show error messages if login fails
+ *
+ * Flow:
+ * 1. User enters credentials
+ * 2. User clicks "Login" button
+ * 3. Form submits → calls login function
+ * 4. If successful → redirect to home
+ * 5. If failed → show error message
+ */
 
-// ============================================
-// REACT HOOKS EXPLAINED
-// ============================================
-/*
-WHAT ARE HOOKS?
-===============
-Hooks are functions that let you "hook into" React features
-Available in functional components (not classes)
+import React, { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
-Common hooks:
-- useState: Add state to component
-- useEffect: Run side effects
-- useNavigate: Navigate programmatically
-- useParams: Get URL parameters
-- useContext: Access context
+/**
+ * LOGIN COMPONENT
+ */
+const Login: React.FC = () => {
+  /**
+   * HOOKS
+   */
 
-WHY HOOKS?
-==========
-Before: Class components with lifecycle methods (complex)
-After: Functional components with hooks (simple)
+  // Get login function from auth context
+  const { login } = useAuth();
 
-Rules:
-1. Only call at top level (not in loops/conditions)
-2. Only call in React functions (components/custom hooks)
-*/
-
-// ============================================
-// LOGIN COMPONENT
-// ============================================
-// Purpose: User authentication interface
-// Responsibilities:
-// - Display login form
-// - Handle form submission
-// - Call auth API
-// - Navigate on success
-// - Show errors on failure
-
-const Login = () => {
-  
-  // ==========================================
-  // STATE MANAGEMENT WITH useState
-  // ==========================================
-  /*
-  useState Syntax:
-  const [value, setValue] = useState(initialValue);
-  
-  - value: current state value
-  - setValue: function to update state
-  - initialValue: starting value
-  
-  When setValue is called:
-  1. State updates
-  2. Component re-renders
-  3. New value shown in UI
-  */
-  
-  // ----------------------------------------
-  // IDENTIFIER STATE
-  // ----------------------------------------
-  // Purpose: Store email or username input
-  // Initial value: '' (empty string)
-  // Strapi uses 'identifier' field (can be email OR username)
-  const [identifier, setIdentifier] = useState('');
-  
-  // ----------------------------------------
-  // PASSWORD STATE
-  // ----------------------------------------
-  // Purpose: Store password input
-  // Initial value: '' (empty string)
-  const [password, setPassword] = useState('');
-  
-  // ----------------------------------------
-  // LOADING STATE
-  // ----------------------------------------
-  // Purpose: Track if login request is in progress
-  // Initial value: false (not loading)
-  // Used to:
-  // - Disable button during request
-  // - Show loading text
-  // - Prevent double submissions
-  const [loading, setLoading] = useState(false);
-  
-  // ----------------------------------------
-  // ERROR STATE
-  // ----------------------------------------
-  // Purpose: Store error message to display
-  // Initial value: '' (no error)
-  // Updated when login fails
-  const [error, setError] = useState('');
-  
-  // ==========================================
-  // NAVIGATION HOOK
-  // ==========================================
-  // useNavigate returns function to navigate programmatically
-  // Purpose: Redirect after successful login
-  // navigate('/path') changes URL and shows that route
+  // Get navigation function for redirecting after login
   const navigate = useNavigate();
 
-  // ==========================================
-  // FORM SUBMIT HANDLER
-  // ==========================================
-  // Purpose: Handle login form submission
-  // Parameters: e (event object)
-  // async: Function makes asynchronous operations (API calls)
-  const handleSubmit = async (e: React.FormEvent) => {
-    // ----------------------------------------
-    // PREVENT DEFAULT FORM BEHAVIOR
-    // ----------------------------------------
-    // Purpose: Stop form from submitting normally
-    // Default behavior:
-    // - Form POSTs to server
-    // - Page reloads
-    // - Loses all state
-    // preventDefault() stops this
-    // We handle submission with JavaScript
-    e.preventDefault();
-    
-    // ----------------------------------------
-    // START LOADING STATE
-    // ----------------------------------------
-    // Update loading to true
-    // This will:
-    // - Disable button (cursor: not-allowed)
-    // - Change text to "Logging in..."
-    setLoading(true);
-    
-    // Clear previous error
-    // New attempt, fresh start
-    setError('');
+  /**
+   * FORM STATE
+   *
+   * What is state?
+   * - Data that can change in a component
+   * - When state changes, component re-renders
+   *
+   * useState hook:
+   * - Returns [currentValue, functionToUpdateValue]
+   * - Example: const [count, setCount] = useState(0)
+   */
 
-    // ----------------------------------------
-    // TRY/CATCH BLOCK
-    // ----------------------------------------
-    // Purpose: Handle success and errors
+  // Store username/email entered by user
+  const [identifier, setIdentifier] = useState('');
+
+  // Store password entered by user
+  const [password, setPassword] = useState('');
+
+  // Store error message (null if no error)
+  const [error, setError] = useState<string | null>(null);
+
+  // Track if login request is in progress
+  // Used to disable button and show loading state
+  const [loading, setLoading] = useState(false);
+
+  /**
+   * FORM SUBMIT HANDLER
+   *
+   * Purpose: Handle login form submission
+   *
+   * What is an event handler?
+   * - Function that runs when an event occurs (like form submit)
+   * - Receives event object as parameter
+   *
+   * How it works:
+   * 1. Prevent default form behavior (page reload)
+   * 2. Clear any previous error
+   * 3. Set loading state to true (show loading, disable button)
+   * 4. Call login function from auth context
+   * 5. If successful, redirect to home page
+   * 6. If failed, show error message
+   * 7. Set loading state back to false
+   *
+   * @param e - Form submit event
+   */
+  const handleSubmit = async (e: React.FormEvent) => {
+    // Prevent default form submission behavior
+    // Without this, page would reload
+    e.preventDefault();
+
+    // Clear any previous error message
+    setError(null);
+
+    // Set loading state to true
+    // This disables the submit button and shows loading text
+    setLoading(true);
+
     try {
-      // ----------------------------------------
-      // CALL AUTH SERVICE LOGIN
-      // ----------------------------------------
-      // authService.login() is async
-      // await pauses until Promise resolves
-      // Returns: { jwt, user }
-      // Flow:
-      // 1. Send credentials to Strapi
-      // 2. Strapi validates
-      // 3. Returns token if valid
-      // 4. Token saved to localStorage
-      const response = await authService.login({ identifier, password });
-      
-      console.log('✅ Login successful:', response);
-      
-      // ----------------------------------------
-      // NAVIGATE TO DASHBOARD
-      // ----------------------------------------
-      // Login succeeded, redirect user
-      // navigate() changes URL
-      // Router renders Dashboard component
-      // User sees their dashboard
-      navigate('/dashboard');
-      
+      // Call login function from auth context
+      // This sends credentials to Strapi
+      await login(identifier, password);
+
+      // If we reach here, login was successful
+      // Redirect user to home page
+      navigate('/');
     } catch (err: any) {
-      // ----------------------------------------
-      // ERROR HANDLING
-      // ----------------------------------------
-      // This runs if login fails
-      // Possible reasons:
-      // - Wrong credentials
-      // - Network error
-      // - Server error
-      
-      console.error('❌ Login failed:', err);
-      
-      // Set error message to display
-      // err.message might be from authService
-      // Or generic message as fallback
-      setError(err.message || 'Login failed. Please check your credentials.');
-      
+      // If login fails, catch the error
+      // Set error message to display to user
+      setError(err.message || 'Failed to login. Please try again.');
     } finally {
-      // ----------------------------------------
-      // FINALLY BLOCK
-      // ----------------------------------------
-      // Runs whether try succeeds or fails
-      // Perfect for cleanup
-      
-      // Stop loading state
-      // Button enabled again
-      // Text back to "Login"
+      // Always run this, whether success or error
+      // Set loading back to false
       setLoading(false);
     }
   };
 
-  // ==========================================
-  // RENDER JSX
-  // ==========================================
-  // Purpose: Define UI structure
-  // return statement defines what appears on screen
-  
+  /**
+   * RENDER LOGIN FORM
+   *
+   * JSX Structure:
+   * - Centered container
+   * - Card with form
+   * - Input fields
+   * - Submit button
+   * - Link to register page
+   */
   return (
-    <div className="container-sm" style={{ marginTop: '50px' }}>
-      <div className="card">
-        {/* ---------------------------------------- */}
-        {/* PAGE TITLE */}
-        {/* ---------------------------------------- */}
-        <h1 className="text-center mb-3">Login to Strapi App</h1>
-        
-        {/* ---------------------------------------- */}
-        {/* LOGIN FORM */}
-        {/* ---------------------------------------- */}
-        {/* onSubmit prop: function to call when form submits
-            Can be triggered by:
-            1. Clicking submit button
-            2. Pressing Enter in input field */}
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center py-12 px-4">
+      {/*
+        Form Container Card
+        - max-w-md: Maximum width for readability
+        - w-full: Full width up to max-w
+        - bg-white: White background
+        - rounded-lg: Rounded corners
+        - shadow-md: Drop shadow for depth
+        - p-8: Padding inside card
+      */}
+      <div className="max-w-md w-full bg-white rounded-lg shadow-md p-8">
+        {/* Page Title */}
+        <h2 className="text-3xl font-bold text-center text-gray-800 mb-8">
+          Login
+        </h2>
+
+        {/*
+          ERROR ALERT
+          Conditional rendering: only show if error exists
+          If error is not null, display error message
+        */}
+        {error && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+            {error}
+          </div>
+        )}
+
+        {/*
+          LOGIN FORM
+          onSubmit: Function to call when form is submitted
+          Can submit by clicking button or pressing Enter
+        */}
         <form onSubmit={handleSubmit}>
-          
-          {/* ---------------------------------------- */}
-          {/* IDENTIFIER INPUT */}
-          {/* ---------------------------------------- */}
-          <div className="mb-2">
-            <label>
-              Email or Username:
-              {/* CONTROLLED INPUT PATTERN
-                  value={identifier}: Input shows current state
-                  onChange: Updates state when user types
-                  Flow:
-                  1. User types 'j'
-                  2. onChange fires
-                  3. setIdentifier('j') called
-                  4. State updates: identifier = 'j'
-                  5. Component re-renders
-                  6. Input value = 'j'
-                  
-                  Benefits:
-                  - React controls value (single source of truth)
-                  - Can validate as user types
-                  - Can transform input (uppercase, trim, etc.)
-                  - Easy to clear/reset */}
-              <input
-                type="text"
-                value={identifier}
-                onChange={(e) => setIdentifier(e.target.value)}
-                required
-                placeholder="john@example.com or johndoe"
-                className="w-full"
-              />
+          {/*
+            USERNAME/EMAIL INPUT FIELD
+          */}
+          <div className="mb-4">
+            {/* Label for input (accessibility) */}
+            <label
+              htmlFor="identifier"
+              className="block text-gray-700 font-semibold mb-2"
+            >
+              Username or Email
             </label>
+
+            {/*
+              Input field
+              - type="text": Text input
+              - value: Controlled input (React manages the value)
+              - onChange: Update state when user types
+              - required: HTML5 validation (must be filled)
+            */}
+            <input
+              type="text"
+              id="identifier"
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Enter your username or email"
+              required
+            />
           </div>
 
-          {/* ---------------------------------------- */}
-          {/* PASSWORD INPUT */}
-          {/* ---------------------------------------- */}
-          <div className="mb-2">
-            <label>
-              Password:
-              {/* type="password": hides characters (shows dots)
-                  Same controlled input pattern as above */}
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="w-full"
-              />
+          {/*
+            PASSWORD INPUT FIELD
+          */}
+          <div className="mb-6">
+            {/* Label for password */}
+            <label
+              htmlFor="password"
+              className="block text-gray-700 font-semibold mb-2"
+            >
+              Password
             </label>
+
+            {/*
+              Password input
+              - type="password": Hides characters (shows dots)
+              - Controlled input with onChange
+            */}
+            <input
+              type="password"
+              id="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Enter your password"
+              required
+            />
           </div>
 
-          {/* ---------------------------------------- */}
-          {/* ERROR MESSAGE (Conditional) */}
-          {/* ---------------------------------------- */}
-          {/* CONDITIONAL RENDERING
-              {error && <div>...</div>}
-              Logical AND (&&):
-              - If left is truthy, render right
-              - If left is falsy, render nothing
-              
-              Examples:
-              error = "Invalid credentials" → shows div
-              error = "" → shows nothing
-              
-              Why this works:
-              - React ignores false, null, undefined
-              - Strings render as text
-              - "" (empty string) is falsy */}
-          {error && (
-            <div className="alert alert-error mb-2">
-              {error}
-            </div>
-          )}
-
-          {/* ---------------------------------------- */}
-          {/* SUBMIT BUTTON */}
-          {/* ---------------------------------------- */}
-          {/* type="submit": Triggers form onSubmit
-              disabled={loading}: Disable while loading
-              className: Dynamic classes based on loading
-              
-              TERNARY OPERATOR:
-              condition ? ifTrue : ifFalse
-              loading ? 'btn-secondary' : 'btn-primary'
-              If loading: gray button (disabled style)
-              If not loading: blue button (enabled) */}
+          {/*
+            SUBMIT BUTTON
+            - type="submit": Triggers form submission
+            - disabled: Can't click while loading
+            - Conditional text: "Logging in..." or "Login"
+          */}
           <button
             type="submit"
             disabled={loading}
-            className={`btn ${loading ? 'btn-secondary' : 'btn-primary'} btn-lg w-full`}
+            className={`w-full py-2 px-4 rounded font-semibold text-white transition ${
+              loading
+                ? 'bg-gray-400 cursor-not-allowed'  // Gray when loading
+                : 'bg-blue-600 hover:bg-blue-700'   // Blue when ready
+            }`}
           >
-            {/* Button text changes based on loading
-                loading true: "Logging in..."
-                loading false: "Login" */}
+            {/* Show different text based on loading state */}
             {loading ? 'Logging in...' : 'Login'}
           </button>
         </form>
 
-        {/* ---------------------------------------- */}
-        {/* TEST INFO BOX */}
-        {/* ---------------------------------------- */}
-        <div className="alert alert-info mt-3">
-          <strong>🔑 Test Credentials:</strong>
-          <p className="text-sm mt-1"><code>Email: john@example.com</code></p>
-          <p className="text-sm"><code>Password: Password123!</code></p>
-          <hr style={{ margin: '10px 0' }} />
-          <p className="text-sm">
-            Make sure Strapi is running at http://localhost:1337
-          </p>
-        </div>
+        {/*
+          LINK TO REGISTER PAGE
+          For users who don't have an account yet
+        */}
+        <p className="mt-6 text-center text-gray-600">
+          Don't have an account?{' '}
+          <Link to="/register" className="text-blue-600 hover:text-blue-700 font-semibold">
+            Register here
+          </Link>
+        </p>
       </div>
     </div>
   );
 };
 
-// ============================================
-// EXPORT
-// ============================================
+// Export component
 export default Login;
-
-// ============================================
-// COMPONENT LIFECYCLE
-// ============================================
-/*
-MOUNT (First Render):
-=====================
-1. Component function runs
-2. useState creates state variables:
-   - identifier = ''
-   - password = ''
-   - loading = false
-   - error = ''
-3. useNavigate initializes
-4. JSX returned
-5. React renders to DOM
-6. User sees login form
-
-USER TYPES EMAIL:
-=================
-1. User types 'j' in email input
-2. onChange event fires
-3. setIdentifier('j') called
-4. State updates: identifier = 'j'
-5. Component re-renders
-6. Input value becomes 'j'
-7. User sees 'j' in input
-(Repeat for each character)
-
-USER SUBMITS FORM:
-==================
-1. User clicks "Login" button
-2. Form onSubmit event fires
-3. handleSubmit function called
-4. e.preventDefault() stops page reload
-5. setLoading(true) → button disabled
-6. setError('') → clear old error
-7. authService.login() called
-8. await pauses execution
-9a. SUCCESS path:
-    - Strapi returns { jwt, user }
-    - Token saved to localStorage
-    - navigate('/dashboard') called
-    - URL changes
-    - Dashboard renders
-9b. ERROR path:
-    - Strapi returns error
-    - catch block executes
-    - setError('Login failed...')
-    - Error message appears
-10. finally block executes
-11. setLoading(false) → button enabled
-
-UNMOUNT (Leave Page):
-=====================
-1. User navigates away
-2. Component unmounts
-3. State destroyed
-4. If return, fresh state created
-*/
