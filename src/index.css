@@ -1,0 +1,197 @@
+/**
+ * GLOBAL STYLES
+ *
+ * Purpose: Define global CSS styles for the entire application
+ *
+ * What's in this file?
+ * - Tailwind CSS directives
+ * - Base styles
+ * - Custom CSS (if needed)
+ *
+ * This file is imported in main.tsx and applies to all components
+ */
+
+/**
+ * TAILWIND CSS DIRECTIVES
+ *
+ * What are these @tailwind directives?
+ * - Special commands processed by Tailwind CSS
+ * - They inject Tailwind's generated CSS
+ *
+ * What is Tailwind CSS?
+ * - Utility-first CSS framework
+ * - Provides pre-built CSS classes
+ * - Instead of writing custom CSS, use utility classes in HTML
+ * - Example: <div class="bg-blue-500 text-white p-4">
+ */
+
+/**
+ * @tailwind base
+ *
+ * What does this do?
+ * - Injects Tailwind's base styles
+ * - Normalizes browser default styles
+ * - Sets consistent defaults across browsers
+ * - Includes CSS reset (removes default margins, paddings, etc.)
+ *
+ * Why do we need this?
+ * - Different browsers have different default styles
+ * - Base styles make everything consistent
+ * - Provides good foundation to build on
+ */
+@tailwind base;
+
+/**
+ * @tailwind components
+ *
+ * What does this do?
+ * - Injects component classes from Tailwind
+ * - Includes form elements, buttons, etc.
+ * - Pre-styled common UI components
+ *
+ * You can also define your own component classes here:
+ * @layer components {
+ *   .btn-primary {
+ *     @apply bg-blue-500 text-white px-4 py-2 rounded;
+ *   }
+ * }
+ */
+@tailwind components;
+
+/**
+ * @tailwind utilities
+ *
+ * What does this do?
+ * - Injects all Tailwind utility classes
+ * - These are the classes you use in your HTML
+ * - Examples: bg-blue-500, text-white, flex, grid, etc.
+ * - Thousands of utility classes for every CSS property
+ *
+ * Why utilities?
+ * - Fast development (no need to write CSS)
+ * - Consistent spacing/colors
+ * - Responsive design built-in
+ * - Smaller CSS bundle (only used classes included)
+ */
+@tailwind utilities;
+
+/**
+ * CUSTOM STYLES
+ *
+ * You can add custom CSS below the Tailwind directives
+ * This is for styles that can't be achieved with Tailwind utilities
+ */
+
+/**
+ * BODY STYLES
+ *
+ * Base styles for the document body
+ * Applied to entire page
+ */
+body {
+  /*
+   * margin: 0
+   * Remove default browser margin
+   * Ensures content reaches edges of viewport
+   */
+  margin: 0;
+
+  /*
+   * font-family
+   * Default font stack for the application
+   * Uses system fonts for best performance
+   * Fallback to sans-serif if system fonts unavailable
+   */
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+
+  /*
+   * -webkit-font-smoothing
+   * Makes fonts look smoother on Mac/iOS
+   * antialiased = smoother rendering
+   */
+  -webkit-font-smoothing: antialiased;
+
+  /*
+   * -moz-osx-font-smoothing
+   * Font smoothing for Firefox on Mac
+   */
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/**
+ * CODE ELEMENTS STYLES
+ *
+ * Styling for <code> elements
+ * Used when displaying code snippets
+ */
+code {
+  /*
+   * font-family
+   * Monospace fonts for code
+   * Makes code more readable
+   * Fixed-width characters align nicely
+   */
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+/**
+ * CUSTOM UTILITY CLASSES
+ *
+ * You can add custom utilities here if needed
+ * Use @layer utilities to include them with Tailwind
+ */
+@layer utilities {
+  /*
+   * Example: Custom scrollbar styles
+   * Uncomment if you want custom scrollbars
+   */
+  /* .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  } */
+}
+
+/**
+ * LEARNING NOTES
+ *
+ * CSS Layers:
+ * Tailwind uses CSS layers for organization:
+ * 1. Base layer (element defaults)
+ * 2. Components layer (reusable components)
+ * 3. Utilities layer (utility classes)
+ *
+ * This order matters for CSS specificity
+ *
+ * Tailwind Workflow:
+ * 1. Tailwind scans your files for class names
+ * 2. Generates CSS for classes you use
+ * 3. Purges unused classes (smaller file)
+ * 4. Result: Only CSS you need is included
+ *
+ * Why Utility-First?
+ * - Faster development (no switching between HTML and CSS)
+ * - No naming struggles (what to call this div?)
+ * - Responsive by default (sm:, md:, lg: prefixes)
+ * - Consistent design system
+ * - Smaller CSS bundle
+ *
+ * Common Tailwind Classes:
+ * - Layout: flex, grid, block, inline
+ * - Spacing: p-4 (padding), m-4 (margin), space-x-4 (gap)
+ * - Colors: bg-blue-500, text-white, border-gray-300
+ * - Typography: text-lg, font-bold, text-center
+ * - Sizing: w-full, h-screen, max-w-md
+ * - Responsive: sm:text-sm, md:text-base, lg:text-lg
+ *
+ * Custom CSS vs Tailwind:
+ * - Use Tailwind utilities for most styling
+ * - Use custom CSS for complex animations
+ * - Use custom CSS for unique one-off styles
+ * - Keep custom CSS minimal
+ */
