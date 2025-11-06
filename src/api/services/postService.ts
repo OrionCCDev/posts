@@ -259,7 +259,7 @@ const postService = {
       // Make POST request with post data
       // Strapi v4 expects data wrapped in { data: ... }
       const response = await axiosInstance.post<StrapiResponse<Post>>(
-        '/api/posts',
+        '/api/posts?populate=author',
         { data: postData }  // Wrap data as required by Strapi v4
       );
 
@@ -318,7 +318,7 @@ const postService = {
       // Make PUT request with post ID and new data
       // PUT is for updating existing resources
       const response = await axiosInstance.put<StrapiResponse<Post>>(
-        `/api/posts/${id}`,
+        `/api/posts/${id}?populate=author`,
         { data: updateData }  // Wrap data for Strapi v4
       );
 
