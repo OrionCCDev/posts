@@ -104,14 +104,9 @@ const Posts: React.FC = () => {
       const data = await postService.getAllPosts();
       console.log('📦 Raw posts data:', data);
 
-      // Process posts to extract plain text from rich text if needed
-      const processedPosts = data.map((post: Post) => ({
-        ...post,
-        content: extractTextFromRichText(post.content)
-      }));
-
-      console.log('✅ Processed posts:', processedPosts);
-      setPosts(processedPosts);
+      // Content is already plain text from Strapi
+      // No need to process, just use directly
+      setPosts(data);
       setError(null);
     } catch (err: any) {
       console.error('❌ Error fetching posts:', err);
@@ -137,7 +132,7 @@ const Posts: React.FC = () => {
    */
   const handleEditClick = (post: Post) => {
     setTitle(post.title);
-    setContent(extractTextFromRichText(post.content)); // Extract text if rich text
+    setContent(post.content as string); // Content is already plain text
     setEditingPostId(post.id);
     setIsEditing(true);
     setShowForm(true);
