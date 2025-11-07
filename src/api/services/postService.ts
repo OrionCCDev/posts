@@ -309,14 +309,19 @@ const postService = {
   updatePost: async (id: number, data: UpdatePostData): Promise<Post> => {
     try {
       // Prepare update data
-      const updateData: any = {
-        ...(data.title && { title: data.title })
-      };
+      const updateData: any = {};
 
-      // If content is being updated, send as plain text
-      if (data.content !== undefined) {
-        updateData.content = data.content;  // Send as plain text string
+      // Add title if provided
+      if (data.title !== undefined) {
+        updateData.title = data.title;
       }
+
+      // Add content if provided
+      if (data.content !== undefined) {
+        updateData.content = data.content;
+      }
+
+      console.log('Updating post with data:', updateData); // Debug log
 
       // Make PUT request with post ID and new data
       // PUT is for updating existing resources

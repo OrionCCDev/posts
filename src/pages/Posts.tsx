@@ -166,15 +166,19 @@ const Posts: React.FC = () => {
     }
 
     setFormLoading(true);
+    setError(null); // Clear any previous errors
 
     try {
       if (isEditing && editingPostId !== null) {
-        await postService.updatePost(editingPostId, {
+        console.log('🔄 Updating post:', editingPostId);
+        const result = await postService.updatePost(editingPostId, {
           title: title.trim(),
           content: content.trim(),
         });
+        console.log('✅ Update result:', result);
         setSuccess('Post updated successfully!');
       } else {
+        console.log('➕ Creating new post');
         // Create post with author ID
         await postService.createPost({
           title: title.trim(),
@@ -184,11 +188,13 @@ const Posts: React.FC = () => {
         setSuccess('Post created successfully!');
       }
 
+      console.log('🔄 Refreshing posts list...');
       await fetchPosts();
       handleCloseForm();
       setTimeout(() => setSuccess(null), 3000);
     } catch (err: any) {
       console.error('❌ Error saving post:', err);
+      console.error('❌ Error details:', err.response?.data);
       setError(err.message || 'Failed to save post');
     } finally {
       setFormLoading(false);
