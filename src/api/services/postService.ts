@@ -58,6 +58,41 @@ interface StrapiResponse<T> {
 }
 
 /**
+ * UTILITY FUNCTION: Convert plain text to Strapi rich text format
+ *
+ * Strapi's rich text editor expects content as an array of blocks
+ * This function converts plain text string to that format
+ *
+ * @param text - Plain text content
+ * @returns Rich text array format for Strapi
+ */
+const convertToRichText = (text: string): any[] => {
+  // Split text by newlines to create separate paragraphs
+  const paragraphs = text.split('\n').filter(p => p.trim().length > 0);
+
+  // If no content, return empty paragraph
+  if (paragraphs.length === 0) {
+    return [
+      {
+        type: 'paragraph',
+        children: [{ type: 'text', text: '' }]
+      }
+    ];
+  }
+
+  // Convert each paragraph to rich text format
+  return paragraphs.map(paragraph => ({
+    type: 'paragraph',
+    children: [
+      {
+        type: 'text',
+        text: paragraph
+      }
+    ]
+  }));
+};
+
+/**
  * POST SERVICE OBJECT
  *
  * Contains all functions for post management
@@ -211,11 +246,21 @@ const postService = {
    */
   createPost: async (data: CreatePostData): Promise<Post> => {
     try {
+      // Convert plain text content to Strapi rich text format
+      // Strapi's rich text field expects an array of paragraph blocks
+      const richTextContent = convertToRichText(data.content);
+
+      // Prepare data with rich text content
+      const postData = {
+        title: data.title,
+        content: richTextContent  // Send as rich text array
+      };
+
       // Make POST request with post data
       // Strapi v4 expects data wrapped in { data: ... }
       const response = await axiosInstance.post<StrapiResponse<Post>>(
-        '/api/posts',
-        { data }  // Wrap data as required by Strapi v4
+        '/api/posts?populate=author',
+        { data: postData }  // Wrap data as required by Strapi v4
       );
 
       console.log('Post created successfully:', response.data);
@@ -260,11 +305,21 @@ const postService = {
    */
   updatePost: async (id: number, data: UpdatePostData): Promise<Post> => {
     try {
+      // Prepare update data with rich text conversion if content is being updated
+      const updateData: any = {
+        ...(data.title && { title: data.title })
+      };
+
+      // If content is being updated, convert it to rich text format
+      if (data.content !== undefined) {
+        updateData.content = convertToRichText(data.content);
+      }
+
       // Make PUT request with post ID and new data
       // PUT is for updating existing resources
       const response = await axiosInstance.put<StrapiResponse<Post>>(
-        `/api/posts/${id}`,
-        { data }  // Wrap data for Strapi v4
+        `/api/posts/${id}?populate=author`,
+        { data: updateData }  // Wrap data for Strapi v4
       );
 
       console.log('Post updated successfully:', response.data);
