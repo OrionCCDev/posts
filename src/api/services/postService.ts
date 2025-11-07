@@ -246,14 +246,11 @@ const postService = {
    */
   createPost: async (data: CreatePostData): Promise<Post> => {
     try {
-      // Convert plain text content to Strapi rich text format
-      // Strapi's rich text field expects an array of paragraph blocks
-      const richTextContent = convertToRichText(data.content);
-
-      // Prepare data with rich text content
+      // Prepare post data
+      // Send content as plain text (Strapi field is configured as Text type)
       const postData = {
         title: data.title,
-        content: richTextContent  // Send as rich text array
+        content: data.content  // Send as plain text string
       };
 
       // Make POST request with post data
@@ -305,14 +302,14 @@ const postService = {
    */
   updatePost: async (id: number, data: UpdatePostData): Promise<Post> => {
     try {
-      // Prepare update data with rich text conversion if content is being updated
+      // Prepare update data
       const updateData: any = {
         ...(data.title && { title: data.title })
       };
 
-      // If content is being updated, convert it to rich text format
+      // If content is being updated, send as plain text
       if (data.content !== undefined) {
-        updateData.content = convertToRichText(data.content);
+        updateData.content = data.content;  // Send as plain text string
       }
 
       // Make PUT request with post ID and new data
