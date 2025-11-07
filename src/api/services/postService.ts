@@ -290,7 +290,7 @@ const postService = {
    * Purpose: Modify an existing post
    *
    * How it works:
-   * 1. Make PUT request to /api/posts/:id with new data
+   * 1. Make PUT request to /api/posts/:documentId with new data
    * 2. Strapi updates the post in database
    * 3. Returns updated post data
    *
@@ -302,11 +302,11 @@ const postService = {
    * - User editing their post
    * - Updating post content or title
    *
-   * @param id - The ID of the post to update
+   * @param idOrDocId - The ID or documentId of the post to update
    * @param data - Object with fields to update (title, content)
    * @returns Promise with updated post data
    */
-  updatePost: async (id: number, data: UpdatePostData): Promise<Post> => {
+  updatePost: async (idOrDocId: number | string, data: UpdatePostData): Promise<Post> => {
     try {
       // Prepare update data
       const updateData: any = {};
@@ -321,12 +321,14 @@ const postService = {
         updateData.content = data.content;
       }
 
+      console.log('Updating post with ID/documentId:', idOrDocId);
       console.log('Updating post with data:', updateData); // Debug log
 
-      // Make PUT request with post ID and new data
+      // Make PUT request with post ID/documentId and new data
       // PUT is for updating existing resources
+      // Strapi v4 can accept either numeric id or documentId
       const response = await axiosInstance.put<StrapiResponse<Post>>(
-        `/api/posts/${id}?populate=author`,
+        `/api/posts/${idOrDocId}?populate=author`,
         { data: updateData }  // Wrap data for Strapi v4
       );
 
@@ -335,6 +337,7 @@ const postService = {
       return response.data.data;
     } catch (error: any) {
       console.error('Error updating post:', error);
+      console.error('Error response:', error.response?.data);
 
       const errorMessage =
         error.response?.data?.error?.message || 'Failed to update post';
@@ -349,7 +352,7 @@ const postService = {
    * Purpose: Remove a post from the database
    *
    * How it works:
-   * 1. Make DELETE request to /api/posts/:id
+   * 1. Make DELETE request to /api/posts/:documentId
    * 2. Strapi removes post from database
    * 3. Returns success status
    *
@@ -365,13 +368,14 @@ const postService = {
    * - User deleting their post
    * - "Delete" button click
    *
-   * @param id - The ID of the post to delete
+   * @param idOrDocId - The ID or documentId of the post to delete
    * @returns Promise that resolves when deletion is complete
    */
-  deletePost: async (id: number): Promise<void> => {
+  deletePost: async (idOrDocId: number | string): Promise<void> => {
     try {
-      // Make DELETE request with post ID
-      await axiosInstance.delete(`/api/posts/${id}`);
+      // Make DELETE request with post ID/documentId
+      console.log('Deleting post with ID/documentId:', idOrDocId);
+      await axiosInstance.delete(`/api/posts/${idOrDocId}`);
 
       console.log('Post deleted successfully');
 
@@ -379,6 +383,7 @@ const postService = {
       // Success means post was deleted
     } catch (error: any) {
       console.error('Error deleting post:', error);
+      console.error('Error response:', error.response?.data);
 
       const errorMessage =
         error.response?.data?.error?.message || 'Failed to delete post';

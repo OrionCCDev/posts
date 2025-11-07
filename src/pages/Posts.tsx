@@ -87,7 +87,7 @@ const Posts: React.FC = () => {
   // Create/Edit form state
   const [showForm, setShowForm] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [editingPostId, setEditingPostId] = useState<number | null>(null);
+  const [editingPostId, setEditingPostId] = useState<number | string | null>(null);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [formLoading, setFormLoading] = useState(false);
@@ -133,7 +133,8 @@ const Posts: React.FC = () => {
   const handleEditClick = (post: Post) => {
     setTitle(post.title);
     setContent(post.content as string); // Content is already plain text
-    setEditingPostId(post.id);
+    // Use documentId if available (Strapi v4), otherwise use numeric id
+    setEditingPostId(post.documentId || post.id);
     setIsEditing(true);
     setShowForm(true);
   };
@@ -204,9 +205,9 @@ const Posts: React.FC = () => {
   /**
    * DELETE POST
    */
-  const handleDelete = async (postId: number, postTitle: string) => {
+  const handleDelete = async (post: Post) => {
     const confirmed = window.confirm(
-      `Are you sure you want to delete the post "${postTitle}"? This action cannot be undone.`
+      `Are you sure you want to delete the post "${post.title}"? This action cannot be undone.`
     );
 
     if (!confirmed) {
@@ -214,8 +215,10 @@ const Posts: React.FC = () => {
     }
 
     try {
-      await postService.deletePost(postId);
-      setPosts((prevPosts) => prevPosts.filter((post) => post.id !== postId));
+      // Use documentId if available (Strapi v4), otherwise use numeric id
+      const idToDelete = post.documentId || post.id;
+      await postService.deletePost(idToDelete);
+      setPosts((prevPosts) => prevPosts.filter((p) => p.id !== post.id));
       setSuccess('Post deleted successfully!');
       setTimeout(() => setSuccess(null), 3000);
     } catch (err: any) {
@@ -422,7 +425,7 @@ const Posts: React.FC = () => {
                       Edit
                     </button>
                     <button
-                      onClick={() => handleDelete(post.id, post.title)}
+                      onClick={() => handleDelete(post)}
                       className="text-red-600 hover:text-red-800 font-semibold text-sm"
                     >
                       Delete
