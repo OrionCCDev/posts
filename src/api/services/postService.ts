@@ -40,8 +40,9 @@ interface Post {
 
 // Interface for creating a new post
 interface CreatePostData {
-  title: string;    // Post title
-  content: string;  // Post content
+  title: string;      // Post title
+  content: string;    // Post content
+  author?: number;    // Optional: Author user ID
 }
 
 // Interface for updating a post
@@ -248,10 +249,15 @@ const postService = {
     try {
       // Prepare post data
       // Send content as plain text (Strapi field is configured as Text type)
-      const postData = {
+      const postData: any = {
         title: data.title,
         content: data.content  // Send as plain text string
       };
+
+      // Include author if provided
+      if (data.author) {
+        postData.author = data.author;  // Link post to user
+      }
 
       // Make POST request with post data
       // Strapi v4 expects data wrapped in { data: ... }
