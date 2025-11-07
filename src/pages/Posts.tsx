@@ -175,9 +175,11 @@ const Posts: React.FC = () => {
         });
         setSuccess('Post updated successfully!');
       } else {
+        // Create post with author ID
         await postService.createPost({
           title: title.trim(),
           content: content.trim(),
+          author: user?.id, // Include author ID from authenticated user
         });
         setSuccess('Post created successfully!');
       }
